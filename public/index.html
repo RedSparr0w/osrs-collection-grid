@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Runelite Task Grid</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="username-gate">
+        <form id="username-form" class="username-card" autocomplete="off">
+            <h2>Enter RuneScape Username</h2>
+            <p>Used to load your collection log progress.</p>
+            <input id="username-input" name="username" type="text" maxlength="12" placeholder="e.g. Zamoraky V" required>
+            <button id="username-submit" type="submit">Continue</button>
+            <div id="username-error" aria-live="polite"></div>
+        </form>
+    </div>
+
+    <div id="unlock-hud">
+        <div class="hud-title">Progress</div>
+        <div class="hud-row">
+            <span class="hud-label">Unlocks</span>
+            <span id="hud-unlocks">0 / 0</span>
+        </div>
+        <div class="hud-row">
+            <span class="hud-label">Next Unlock</span>
+            <span id="hud-next-unlock">0 tasks</span>
+        </div>
+    </div>
+
+    <button id="tier-progress-button" type="button" title="View tier progress and tasks">
+        <span class="menu-title">Tier Progress</span>
+        <span id="tier-progress-lines" class="tier-progress-lines"></span>
+    </button>
+
+    <div id="current-tasks-wrap">
+        <button id="current-tasks-button" type="button" title="Show available incomplete tasks">Current Tasks</button>
+        <div id="current-tasks-popover" class="current-tasks-popover" aria-live="polite">
+            <div class="current-tasks-header">Available Incomplete Tasks</div>
+            <div id="current-tasks-list" class="current-tasks-list"></div>
+        </div>
+    </div>
+
+    <div id="options-wrap">
+        <button id="options-button" type="button" title="Display options" aria-expanded="false" aria-controls="options-popover">Options</button>
+        <div id="options-popover" class="options-popover">
+            <div class="options-section">
+                <label class="options-row" for="complete-opacity-input">
+                    <span>Completed Opacity</span>
+                    <span id="complete-opacity-value">50%</span>
+                </label>
+                <input id="complete-opacity-input" type="range" min="20" max="100" step="1" value="50" aria-label="Completed item opacity">
+            </div>
+
+            <div class="options-section">
+                <label class="options-toggle" for="hide-tier-hint-input">
+                    <input id="hide-tier-hint-input" type="checkbox" aria-label="Hide tier hint on locked tasks">
+                    <span>Hide tier hint on locked tasks</span>
+                </label>
+            </div>
+
+            <div class="options-section">
+                <div class="options-row options-row-inline">
+                    <span>Tier Filters</span>
+                    <button id="tier-filter-clear" class="options-inline-button" type="button">Show all</button>
+                </div>
+                <div id="tier-filter-controls" class="tier-filter-controls" role="group" aria-label="Tier filters"></div>
+                <div class="options-note">Selected filters stay full opacity. Others are 20% opacity. Locked applies when "Hide tier hint on locked tasks" is enabled.</div>
+            </div>
+
+            <div class="options-section">
+                <div class="options-label">Theme</div>
+                <div id="theme-toggle" role="group" aria-label="Theme">
+                    <button id="theme-osrs" class="theme-option" data-theme="osrs" type="button">OSRS</button>
+                    <button id="theme-dark" class="theme-option" data-theme="dark" type="button">Dark</button>
+                </div>
+            </div>
+
+            <div class="options-section">
+                <div class="options-label">Sync</div>
+                <button id="sync-button" type="button" title="Reload collection log progress">Wiki Sync</button>
+                <label class="options-toggle" for="auto-wiki-toast-input">
+                    <input id="auto-wiki-toast-input" type="checkbox" aria-label="Show auto wiki update notifications">
+                    <span>Auto wiki update notifications</span>
+                </label>
+                <div class="options-note">Auto-update alerts stay visible until dismissed and reappear only when auto-completable task count increases.</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- loading overlay -->
+    <div id="loading" class="d-flex justify-content-center align-items-center">
+        <div class="loading-icons">
+            <img src="https://oldschool.runescape.wiki/images/9/93/Clue_scroll_(beginner).png" class="loading-icon" />
+            <img src="https://oldschool.runescape.wiki/images/6/67/Clue_scroll_(easy).png" class="loading-icon" />
+            <img src="https://oldschool.runescape.wiki/images/4/4d/Clue_scroll_(medium).png" class="loading-icon" />
+            <img src="https://oldschool.runescape.wiki/images/0/0d/Clue_scroll_(hard).png" class="loading-icon" />
+            <img src="https://oldschool.runescape.wiki/images/0/0e/Clue_scroll_(elite).png" class="loading-icon" />
+            <img src="https://oldschool.runescape.wiki/images/2/2a/Clue_scroll_(master).png" class="loading-icon" />
+        </div>
+    </div>
+    <div id="grid-container">
+        <div id="grid-stage">
+            <div id="grid"></div>
+        </div>
+    </div>
+
+    <!-- modal for task details -->
+    <div id="task-modal" class="modal">
+        <div class="modal-content">
+            <button type="button" class="modal-close" aria-label="Close">×</button>
+            <div class="modal-header-row">
+                <img id="modal-image" src="" alt="">
+                <div class="modal-copy">
+                    <h5 id="modal-title"></h5>
+                    <p id="modal-tip"></p>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <a id="modal-wiki" href="#" target="_blank" rel="noopener noreferrer">Wiki page</a>
+                <button id="modal-complete" style="display:none;">Mark complete</button>
+                <span id="modal-tier-badge"></span>
+            </div>
+            <div id="modal-items-required"></div>
+            <div id="modal-items"></div>
+        </div>
+    </div>
+
+    <div id="tier-tasks-modal" class="modal">
+        <div class="modal-content tier-tasks-modal-content">
+            <button type="button" class="modal-close" id="tier-tasks-close" aria-label="Close">×</button>
+            <h5 id="tier-tasks-title">Tier Tasks</h5>
+            <div id="tier-tabs" class="tier-tabs"></div>
+            <div id="tier-tasks-list" class="tier-tasks-list"></div>
+        </div>
+    </div>
+
+    <!-- unlock gained notification -->
+    <div id="unlock-toast" role="status" aria-live="polite">
+        <span class="unlock-toast-icon">🔓</span>
+        <div class="unlock-toast-body">
+            <span class="unlock-toast-title">New unlock slot!</span>
+            <span class="unlock-toast-sub">You can now have up to <strong id="unlock-toast-slots">1</strong> tasks active at once</span>
+        </div>
+        <button type="button" class="unlock-toast-close" aria-label="Dismiss">×</button>
+    </div>
+
+    <div id="sync-summary-toast" role="status" aria-live="polite">
+        <span class="unlock-toast-icon">✅</span>
+        <div class="unlock-toast-body">
+            <span id="sync-summary-toast-title" class="unlock-toast-title">Wiki sync complete</span>
+            <span id="sync-summary-toast-sub" class="unlock-toast-sub">No new tasks completed.</span>
+        </div>
+        <button type="button" class="unlock-toast-close" aria-label="Dismiss">×</button>
+    </div>
+
+    <script src="scripts/app.js" type="module"></script>
+</body>
+</html>
