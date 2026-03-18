@@ -150,10 +150,6 @@ class CoreUtils {
         return this.clamp(parsed, MIN_COMPLETE_CELL_OPACITY, MAX_COMPLETE_CELL_OPACITY);
     }
 
-    static normalizeTierHintSetting(value) {
-        return value === true || value === 'true' || value === '1';
-    }
-
     static normalizeTierFilterSelection(value) {
         let parsed = value;
 
@@ -262,79 +258,35 @@ let selectedTierFilters = new Set();
 let autoWikiToastEnabled = true;
 let autoWikiToastAcknowledgedCount = 0;
 
+// Load app settings and apply defaults if necessary, then persist back to storage to ensure all keys are present for future sessions
+// TODO: Move to own class for getting and setting settings with validation and normalization, and remove direct access to these variables outside of that class
 let appSettings = CoreUtils.loadAppSettings();
 const hasAppSetting = key => Object.prototype.hasOwnProperty.call(appSettings, key);
 const persistAppSettings = () => {
     CoreUtils.saveAppSettings(appSettings);
 };
 
-try {
-    const rawCompleteOpacity = hasAppSetting(COMPLETE_OPACITY_KEY)
-        ? appSettings[COMPLETE_OPACITY_KEY]
-        : localStorage.getItem(COMPLETE_OPACITY_KEY);
-    completeCellOpacity = CoreUtils.normalizeCompleteOpacity(rawCompleteOpacity);
-} catch {
-    completeCellOpacity = DEFAULT_COMPLETE_CELL_OPACITY;
-}
+completeCellOpacity = appSettings[COMPLETE_OPACITY_KEY] ?? DEFAULT_COMPLETE_CELL_OPACITY;
 appSettings[COMPLETE_OPACITY_KEY] = completeCellOpacity;
 
-try {
-    const rawHideTierHint = hasAppSetting(HIDE_TIER_HINT_KEY)
-        ? appSettings[HIDE_TIER_HINT_KEY]
-        : localStorage.getItem(HIDE_TIER_HINT_KEY);
-    hideTierHintOnLocked = CoreUtils.normalizeTierHintSetting(rawHideTierHint);
-} catch {
-    hideTierHintOnLocked = false;
-}
+hideTierHintOnLocked = appSettings[HIDE_TIER_HINT_KEY] ?? false;
 appSettings[HIDE_TIER_HINT_KEY] = hideTierHintOnLocked;
 
-try {
-    const rawTierFilters = hasAppSetting(TIER_FILTER_KEY)
-        ? appSettings[TIER_FILTER_KEY]
-        : localStorage.getItem(TIER_FILTER_KEY);
-    selectedTierFilters = CoreUtils.normalizeTierFilterSelection(rawTierFilters);
-} catch {
-    selectedTierFilters = new Set();
-}
+selectedTierFilters = new Set(appSettings[TIER_FILTER_KEY] ?? []);
 appSettings[TIER_FILTER_KEY] = Array.from(selectedTierFilters);
 
-try {
-    const rawTheme = hasAppSetting(THEME_KEY)
-        ? appSettings[THEME_KEY]
-        : localStorage.getItem(THEME_KEY);
-    activeTheme = CoreUtils.normalizeTheme(rawTheme);
-} catch {
-    activeTheme = 'osrs';
-}
+activeTheme = appSettings[THEME_KEY] ?? 'osrs';
 appSettings[THEME_KEY] = activeTheme;
 
-try {
-    const rawAutoWikiToastSetting = hasAppSetting(AUTO_WIKI_TOAST_ENABLED_KEY)
-        ? appSettings[AUTO_WIKI_TOAST_ENABLED_KEY]
-        : localStorage.getItem(AUTO_WIKI_TOAST_ENABLED_KEY);
-    autoWikiToastEnabled = rawAutoWikiToastSetting === null
-        ? true
-        : CoreUtils.normalizeTierHintSetting(rawAutoWikiToastSetting);
-} catch {
-    autoWikiToastEnabled = true;
-}
+autoWikiToastEnabled = appSettings[AUTO_WIKI_TOAST_ENABLED_KEY] ?? true;
 appSettings[AUTO_WIKI_TOAST_ENABLED_KEY] = autoWikiToastEnabled;
 
-try {
-    const rawAcknowledgedCount = hasAppSetting(AUTO_WIKI_TOAST_ACK_COUNT_KEY)
-        ? appSettings[AUTO_WIKI_TOAST_ACK_COUNT_KEY]
-        : localStorage.getItem(AUTO_WIKI_TOAST_ACK_COUNT_KEY);
-    const parsedAcknowledgedCount = Number.parseInt(String(rawAcknowledgedCount ?? ''), 10);
-    autoWikiToastAcknowledgedCount = Number.isFinite(parsedAcknowledgedCount) && parsedAcknowledgedCount >= 0
-        ? parsedAcknowledgedCount
-        : 0;
-} catch {
-    autoWikiToastAcknowledgedCount = 0;
-}
+autoWikiToastAcknowledgedCount = appSettings[AUTO_WIKI_TOAST_ACK_COUNT_KEY] ?? 0;
 appSettings[AUTO_WIKI_TOAST_ACK_COUNT_KEY] = autoWikiToastAcknowledgedCount;
 
 persistAppSettings();
 
+// Set our theme and custom CSS properties
 if (typeof document !== 'undefined' && document.body) {
     document.body.dataset.theme = activeTheme;
 }
