@@ -1,22 +1,22 @@
 export const settingsKeys = {
+    COMPLETE_OPACITY: 'completeCellOpacity',
+    HIDE_TIER_HINT: 'hideTierHintOnLocked',
     THEME: 'theme',
     TIER_FILTER: 'tierFilter',
     AUTO_WIKI_TOAST_ENABLED: 'autoWikiToastEnabled',
     AUTO_WIKI_TOAST_ACK_COUNT: 'autoWikiToastAckCount',
-    COMPLETE_OPACITY: 'completeCellOpacity',
-    HIDE_TIER_HINT: 'hideTierHintOnLocked',
     USERNAME: 'username',
 };
 
 class Settings {
     _defaultSettings = {
+        [settingsKeys.COMPLETE_OPACITY]: 0.2,
+        [settingsKeys.HIDE_TIER_HINT]: false,
         [settingsKeys.THEME]: 'osrs',
         [settingsKeys.TIER_FILTER]: [],
         [settingsKeys.AUTO_WIKI_TOAST_ENABLED]: true,
         [settingsKeys.AUTO_WIKI_TOAST_ACK_COUNT]: 0,
-        [settingsKeys.COMPLETE_OPACITY]: 0.2,
-        [settingsKeys.HIDE_TIER_HINT]: false,
-
+        [settingsKeys.USERNAME]: '',
     };
 
     constructor(storageKey = 'appSettings') {

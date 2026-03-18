@@ -12,7 +12,6 @@ const tiers = [
 
 const LOCKED_TILE_IMAGE = 'https://oldschool.runescape.wiki/images/thumb/Cake_of_guidance_detail.png/260px-Cake_of_guidance_detail.png?c3595';
 const QUESTION_MARK_ICON = `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="10" fill="#46433A"/><text x="32" y="44" font-size="42" text-anchor="middle" fill="#FFCF3F" font-family="sans-serif" font-weight="700">?</text></svg>')}`;
-const STATES = ['hidden', 'locked', 'incomplete', 'complete'];
 const DRAG_THRESHOLD = 6;
 const STATE_KEY = 'taskStates';
 const STORAGE_KEY = 'taskGridOrder';
@@ -33,7 +32,6 @@ const HOVER_LERP_FACTOR = 0.25;
 const HOVER_SCALE_BOOST = 0.04;
 const HOVER_LIFT_PX = 2;
 const LOCKED_FILTER_KEY = '__locked__';
-const DEFAULT_COMPLETE_CELL_OPACITY = 0.2;
 const MIN_COMPLETE_CELL_OPACITY = 0.2;
 const MAX_COMPLETE_CELL_OPACITY = 1;
 const FILTERED_TIER_OPACITY = 0.2;
@@ -210,7 +208,6 @@ let tasksGlobal = [];
 let currentScale = 1;
 let activePopoverAnchor = null;
 let stateMap = CoreUtils.loadStates();
-let playerUsername = '';
 let hasStartedApp = false;
 let syncButtonStatusTimer = null;
 let activeTierTab = '';
@@ -226,7 +223,6 @@ let zoomRenderDebounceTimer = null;
 let isZooming = false;
 let hoveredCellId = '';
 let activeTheme = 'osrs';
-let completeCellOpacity = DEFAULT_COMPLETE_CELL_OPACITY;
 let hideTierHintOnLocked = false;
 let selectedTierFilters = new Set();
 let autoWikiToastEnabled = true;
@@ -236,9 +232,6 @@ let autoWikiToastAcknowledgedCount = 0;
 // TODO: Move to own class for getting and setting settings with validation and normalization, and remove direct access to these variables outside of that class
 import appSettings from './Settings.js';
 import { settingsKeys } from './Settings.js';
-
-completeCellOpacity = appSettings.get(settingsKeys.COMPLETE_OPACITY) ?? DEFAULT_COMPLETE_CELL_OPACITY;
-appSettings.set(settingsKeys.COMPLETE_OPACITY, completeCellOpacity)
 
 hideTierHintOnLocked = appSettings.get(settingsKeys.HIDE_TIER_HINT) ?? false;
 appSettings.set(settingsKeys.HIDE_TIER_HINT, hideTierHintOnLocked)
@@ -261,7 +254,7 @@ if (typeof document !== 'undefined' && document.body) {
 }
 
 if (typeof document !== 'undefined' && document.documentElement) {
-    document.documentElement.style.setProperty('--state-complete-opacity', String(completeCellOpacity));
+    document.documentElement.style.setProperty('--state-complete-opacity', String(appSettings.get(settingsKeys.COMPLETE_OPACITY)));
 }
 
 const imageAssetCache = new Map();
@@ -2539,8 +2532,6 @@ class UiSettings {
 
         selectedTierFilters = new Set(Array.from(normalized).filter(tier => filterableTierSet.has(tier)));
 
-        this.updateTierFilterControls();
-
         if (persist) {
             appSettings.set(settingsKeys.TIER_FILTER, Array.from(selectedTierFilters))
         }
@@ -2548,6 +2539,8 @@ class UiSettings {
         if (rerender) {
             queueCanvasRender();
         }
+
+        this.updateTierFilterControls();
     }
 
     getTierOpacityForCell(cell) {
@@ -2579,7 +2572,7 @@ class UiSettings {
         return selectedTierFilters.has(tier) ? 1 : FILTERED_TIER_OPACITY;
     }
 
-    getCompleteOpacityPercent(value = completeCellOpacity) {
+    getCompleteOpacityPercent(value = appSettings.get(settingsKeys.COMPLETE_OPACITY)) {
         return Math.round(value * 100);
     }
 
@@ -2615,13 +2608,9 @@ class UiSettings {
         const { persist = true, rerender = true } = options;
         const nextOpacity = CoreUtils.normalizeCompleteOpacity(value);
 
-        completeCellOpacity = nextOpacity;
-
         if (document.documentElement) {
             document.documentElement.style.setProperty('--state-complete-opacity', String(nextOpacity));
         }
-
-        this.updateCompleteOpacityControls();
 
         if (persist) {
             appSettings.set(settingsKeys.COMPLETE_OPACITY, nextOpacity)
@@ -2630,12 +2619,13 @@ class UiSettings {
         if (rerender) {
             queueCanvasRender();
         }
+
+        this.updateCompleteOpacityControls();
     }
 
     applyHideTierHintOnLocked(value, options = {}) {
         const { persist = true, rerender = true } = options;
         hideTierHintOnLocked = Boolean(value);
-        this.updateTierHintControls();
 
         if (persist) {
             appSettings.set(settingsKeys.HIDE_TIER_HINT, hideTierHintOnLocked)
@@ -2645,12 +2635,13 @@ class UiSettings {
             queueCanvasRender();
             taskModal.refreshOpenModal();
         }
+
+        this.updateTierHintControls();
     }
 
     applyAutoWikiToastSetting(value, options = {}) {
         const { persist = true } = options;
         autoWikiToastEnabled = Boolean(value);
-        this.updateAutoWikiToastControls();
 
         if (persist) {
             appSettings.set(settingsKeys.AUTO_WIKI_TOAST_ENABLED, autoWikiToastEnabled)
@@ -2659,6 +2650,8 @@ class UiSettings {
         if (!autoWikiToastEnabled) {
             hudManager.dismissSyncSummaryToast();
         }
+
+        this.updateAutoWikiToastControls();
     }
 
     setOptionsPopoverOpen(isOpen) {
@@ -2677,10 +2670,10 @@ class UiSettings {
     }
 
     initOptionsMenu() {
-        this.applyCompleteOpacity(completeCellOpacity, { persist: false, rerender: false });
-        this.applyHideTierHintOnLocked(hideTierHintOnLocked, { persist: false, rerender: false });
-        this.applyAutoWikiToastSetting(autoWikiToastEnabled, { persist: false });
-        this.applyTierFilters(selectedTierFilters, { persist: false, rerender: false });
+        this.applyCompleteOpacity(appSettings.get(settingsKeys.COMPLETE_OPACITY), { persist: false, rerender: false });
+        this.applyHideTierHintOnLocked(appSettings.get(settingsKeys.HIDE_TIER_HINT), { persist: false, rerender: false });
+        this.applyAutoWikiToastSetting(appSettings.get(settingsKeys.AUTO_WIKI_TOAST_ENABLED), { persist: false });
+        this.applyTierFilters(appSettings.get(settingsKeys.TIER_FILTER), { persist: false, rerender: false });
 
         const optionsButton = document.getElementById('options-button');
         const optionsPopover = document.getElementById('options-popover');
@@ -3632,6 +3625,7 @@ class ProgressSyncManager {
     }
 
     async syncPlayerProgress() {
+        const playerUsername = appSettings.get(settingsKeys.USERNAME);
         if (!playerUsername) {
             return 0;
         }
@@ -4797,7 +4791,7 @@ class CanvasSpriteManager {
         }
 
         if (state === 'complete') {
-            alpha *= completeCellOpacity;
+            alpha *= appSettings.get(settingsKeys.COMPLETE_OPACITY);
         }
 
         alpha *= uiSettings.getTierOpacityForCell(cell);
@@ -5149,7 +5143,7 @@ class AppBootstrap {
         });
 
         const collectionLogPromise = wiki.loadCollectionLogItems();
-        const playerDataPromise = wiki.loadPlayerData(playerUsername);
+        const playerDataPromise = wiki.loadPlayerData(appSettings.get(settingsKeys.USERNAME));
 
         taskOrderManager.loadAllTierData().then(data => {
 
@@ -5343,7 +5337,7 @@ class AppBootstrap {
         const error = document.getElementById('username-error');
 
         const startWithUsername = username => {
-            playerUsername = wiki.normalizeUsername(username);
+            const playerUsername = wiki.normalizeUsername(username);
             appSettings.set(settingsKeys.USERNAME, playerUsername)
 
             if (gate) {
