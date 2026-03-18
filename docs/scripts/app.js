@@ -32,12 +32,6 @@ const CANVAS_PIXEL_RATIO_STEP = 0.25;
 const HOVER_LERP_FACTOR = 0.25;
 const HOVER_SCALE_BOOST = 0.04;
 const HOVER_LIFT_PX = 2;
-const APP_SETTINGS_STORAGE_KEY = 'appSettings';
-const COMPLETE_OPACITY_KEY = 'completeCellOpacity';
-const HIDE_TIER_HINT_KEY = 'hideTierHintOnLocked';
-const TIER_FILTER_KEY = 'tierFilters';
-const AUTO_WIKI_TOAST_ENABLED_KEY = 'autoWikiToastEnabled';
-const AUTO_WIKI_TOAST_ACK_COUNT_KEY = 'autoWikiToastAcknowledgedCount';
 const LOCKED_FILTER_KEY = '__locked__';
 const DEFAULT_COMPLETE_CELL_OPACITY = 0.2;
 const MIN_COMPLETE_CELL_OPACITY = 0.2;
@@ -46,10 +40,8 @@ const FILTERED_TIER_OPACITY = 0.2;
 const UNLOCK_TOAST_DURATION_MS = 4500;
 const CL_CACHE_KEY = 'collectionLogCache';
 const CL_CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
-const USERNAME_KEY = 'playerUsername';
 const PLAYER_CL_CACHE_PREFIX = 'playerCollectionLogCache';
 const PLAYER_CL_CACHE_TTL = 15 * 60 * 1000; // 15 minutes
-const THEME_KEY = 'uiTheme';
 const THEMES = new Set(['osrs', 'dark']);
 const DIARY_DIFFICULTIES = new Set(['easy', 'medium', 'hard', 'elite']);
 const TIER_DISPLAY_ORDER = ['easy', 'medium', 'hard', 'elite', 'master', 'master-tedious', 'extra', 'pets'];
@@ -204,24 +196,6 @@ class CoreUtils {
         }
     }
 
-    static loadAppSettings() {
-        try {
-            const raw = localStorage.getItem(APP_SETTINGS_STORAGE_KEY);
-            if (!raw) {
-                return {};
-            }
-
-            const parsed = JSON.parse(raw);
-            if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
-                return {};
-            }
-
-            return parsed;
-        } catch {
-            return {};
-        }
-    }
-
     static saveAppSettings(settings) {
         try {
             localStorage.setItem(APP_SETTINGS_STORAGE_KEY, JSON.stringify(settings || {}));
@@ -260,31 +234,26 @@ let autoWikiToastAcknowledgedCount = 0;
 
 // Load app settings and apply defaults if necessary, then persist back to storage to ensure all keys are present for future sessions
 // TODO: Move to own class for getting and setting settings with validation and normalization, and remove direct access to these variables outside of that class
-let appSettings = CoreUtils.loadAppSettings();
-const hasAppSetting = key => Object.prototype.hasOwnProperty.call(appSettings, key);
-const persistAppSettings = () => {
-    CoreUtils.saveAppSettings(appSettings);
-};
+import appSettings from './Settings.js';
+import { settingsKeys } from './Settings.js';
 
-completeCellOpacity = appSettings[COMPLETE_OPACITY_KEY] ?? DEFAULT_COMPLETE_CELL_OPACITY;
-appSettings[COMPLETE_OPACITY_KEY] = completeCellOpacity;
+completeCellOpacity = appSettings.get(settingsKeys.COMPLETE_OPACITY) ?? DEFAULT_COMPLETE_CELL_OPACITY;
+appSettings.set(settingsKeys.COMPLETE_OPACITY, completeCellOpacity)
 
-hideTierHintOnLocked = appSettings[HIDE_TIER_HINT_KEY] ?? false;
-appSettings[HIDE_TIER_HINT_KEY] = hideTierHintOnLocked;
+hideTierHintOnLocked = appSettings.get(settingsKeys.HIDE_TIER_HINT) ?? false;
+appSettings.set(settingsKeys.HIDE_TIER_HINT, hideTierHintOnLocked)
 
-selectedTierFilters = new Set(appSettings[TIER_FILTER_KEY] ?? []);
-appSettings[TIER_FILTER_KEY] = Array.from(selectedTierFilters);
+selectedTierFilters = new Set(appSettings.get(settingsKeys.TIER_FILTER) ?? []);
+appSettings.set(settingsKeys.TIER_FILTER, Array.from(selectedTierFilters))
 
-activeTheme = appSettings[THEME_KEY] ?? 'osrs';
-appSettings[THEME_KEY] = activeTheme;
+activeTheme = appSettings.get(settingsKeys.THEME) ?? 'osrs';
+appSettings.set(settingsKeys.THEME, activeTheme)
 
-autoWikiToastEnabled = appSettings[AUTO_WIKI_TOAST_ENABLED_KEY] ?? true;
-appSettings[AUTO_WIKI_TOAST_ENABLED_KEY] = autoWikiToastEnabled;
+autoWikiToastEnabled = appSettings.get(settingsKeys.AUTO_WIKI_TOAST_ENABLED) ?? true;
+appSettings.set(settingsKeys.AUTO_WIKI_TOAST_ENABLED, autoWikiToastEnabled)
 
-autoWikiToastAcknowledgedCount = appSettings[AUTO_WIKI_TOAST_ACK_COUNT_KEY] ?? 0;
-appSettings[AUTO_WIKI_TOAST_ACK_COUNT_KEY] = autoWikiToastAcknowledgedCount;
-
-persistAppSettings();
+autoWikiToastAcknowledgedCount = appSettings.get(settingsKeys.AUTO_WIKI_TOAST_ACK_COUNT) ?? 0;
+appSettings.set(settingsKeys.AUTO_WIKI_TOAST_ACK_COUNT, autoWikiToastAcknowledgedCount)
 
 // Set our theme and custom CSS properties
 if (typeof document !== 'undefined' && document.body) {
@@ -2573,8 +2542,7 @@ class UiSettings {
         this.updateTierFilterControls();
 
         if (persist) {
-            appSettings[TIER_FILTER_KEY] = Array.from(selectedTierFilters);
-            persistAppSettings();
+            appSettings.set(settingsKeys.TIER_FILTER, Array.from(selectedTierFilters))
         }
 
         if (rerender) {
@@ -2656,8 +2624,7 @@ class UiSettings {
         this.updateCompleteOpacityControls();
 
         if (persist) {
-            appSettings[COMPLETE_OPACITY_KEY] = nextOpacity;
-            persistAppSettings();
+            appSettings.set(settingsKeys.COMPLETE_OPACITY, nextOpacity)
         }
 
         if (rerender) {
@@ -2671,8 +2638,7 @@ class UiSettings {
         this.updateTierHintControls();
 
         if (persist) {
-            appSettings[HIDE_TIER_HINT_KEY] = hideTierHintOnLocked;
-            persistAppSettings();
+            appSettings.set(settingsKeys.HIDE_TIER_HINT, hideTierHintOnLocked)
         }
 
         if (rerender) {
@@ -2687,8 +2653,7 @@ class UiSettings {
         this.updateAutoWikiToastControls();
 
         if (persist) {
-            appSettings[AUTO_WIKI_TOAST_ENABLED_KEY] = autoWikiToastEnabled;
-            persistAppSettings();
+            appSettings.set(settingsKeys.AUTO_WIKI_TOAST_ENABLED, autoWikiToastEnabled)
         }
 
         if (!autoWikiToastEnabled) {
@@ -2818,8 +2783,7 @@ class UiSettings {
         }
 
         if (persist) {
-            appSettings[THEME_KEY] = nextTheme;
-            persistAppSettings();
+            appSettings.set(settingsKeys.THEME, nextTheme)
         }
 
         this.updateThemeToggleButtons();
@@ -3088,8 +3052,7 @@ class HudManager {
 
         if (this.syncSummaryToastMode === 'auto-request') {
             autoWikiToastAcknowledgedCount = Math.max(autoWikiToastAcknowledgedCount, this.activeAutoCompletableCount);
-            appSettings[AUTO_WIKI_TOAST_ACK_COUNT_KEY] = autoWikiToastAcknowledgedCount;
-            persistAppSettings();
+            appSettings.set(settingsKeys.AUTO_WIKI_TOAST_ACK_COUNT, autoWikiToastAcknowledgedCount)
         }
 
         toast.classList.add('leaving');
@@ -5381,8 +5344,7 @@ class AppBootstrap {
 
         const startWithUsername = username => {
             playerUsername = wiki.normalizeUsername(username);
-            appSettings[USERNAME_KEY] = playerUsername;
-            persistAppSettings();
+            appSettings.set(settingsKeys.USERNAME, playerUsername)
 
             if (gate) {
                 gate.style.display = 'none';
@@ -5395,12 +5357,11 @@ class AppBootstrap {
         };
 
         const savedUsername = wiki.normalizeUsername(
-            appSettings[USERNAME_KEY] ?? localStorage.getItem(USERNAME_KEY)
+            appSettings.get(settingsKeys.USERNAME) ?? localStorage.getItem(settingsKeys.USERNAME)
         );
         if (savedUsername) {
-            if (appSettings[USERNAME_KEY] !== savedUsername) {
-                appSettings[USERNAME_KEY] = savedUsername;
-                persistAppSettings();
+            if (appSettings.get(settingsKeys.USERNAME) !== savedUsername) {
+                appSettings.set(settingsKeys.USERNAME, savedUsername)
             }
             startWithUsername(savedUsername);
             return;
