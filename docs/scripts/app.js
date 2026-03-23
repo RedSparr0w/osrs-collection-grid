@@ -3234,7 +3234,7 @@ class TaskModal {
             wikiButton.style.display = 'none';
         } else {
             title.textContent = task.name;
-            appUtils.setImageWithFallback(image, task.imageLink.replace(/(_detail)?\.png$/, '_detail.png')?.replace(/_icon(_detail)?/, ''), task.name);
+            appUtils.setImageWithFallback(image, task.imageLink, task.name);
             tip.textContent = task.tip || '';
             wikiButton.href = task.wikiLink || '#';
             wikiButton.style.display = 'inline-block';
@@ -4620,7 +4620,7 @@ class CanvasSpriteManager {
 
         const imageSource = cell.state === 'locked'
             ? LOCKED_TILE_IMAGE
-            : (cell.state === 'incomplete' || cell.state === 'complete' ? cell.task.imageLink.replace(/(_detail)?\.png$/, '_detail.png')?.replace(/_icon(_detail)?/, '') : null);
+            : (cell.state === 'incomplete' || cell.state === 'complete' ? cell.task.imageLink : null);
         const imageState = this.getCellImageDrawState(imageSource);
         const spriteKey = this.getCellSpriteKey(cell, imageState.key);
 
@@ -5069,7 +5069,7 @@ class RenderWarmupManager {
         tasks.forEach(task => {
             const state = taskManager.getState(task.id);
             if (state === 'incomplete' || state === 'complete' || state === 'locked') {
-                sources.add(task.imageLink.replace(/(_detail)?\.png$/, '_detail.png')?.replace(/_icon(_detail)?/, ''));
+                sources.add(task.imageLink);
             }
         });
 
