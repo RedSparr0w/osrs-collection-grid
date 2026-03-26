@@ -17,10 +17,12 @@ Refactor classes
 - Reduce complexity
 
 Features
-- Keep track of when task was unlocked
-- Keep track of when task was completed
-- Keep track of task completion order
-  - When loading page show tasks in the order they were completed?
-- Add a seed option?
-- Add "free spaces" for when new tasks are released in the future
-- Add hints for locked tasks? (type - boss, mini game, clue, diary etc)
+- [ ] Keep track of when task was unlocked
+- [ ] Keep track of when task was completed
+- [ ] Keep track of task completion order
+  - [ ] When loading page show tasks in the order they were completed?
+- [ ] Add a seed option?
+- [ ] Add "free spaces" for when new tasks are released in the future
+- [ ] Add hints for locked tasks? (type - boss, mini game, clue, diary etc)
+- [ ] Import/export grid option
+- [ ] Logout/switch accounts support
