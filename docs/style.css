@@ -318,7 +318,7 @@ body {
     color: var(--text-muted);
 }
 
-#sync-button {
+#sync-button, #logout-button {
     width: 100%;
     border: 1px solid var(--theme-border-strong);
     border-radius: var(--radius-medium);
@@ -334,7 +334,9 @@ body {
 }
 
 #sync-button:hover:not(:disabled),
-#sync-button:focus-visible:not(:disabled) {
+#sync-button:focus-visible:not(:disabled),
+#logout-button:hover:not(:disabled),
+#logout-button:focus-visible:not(:disabled) {
     background: var(--theme-surface-hover);
 }
 

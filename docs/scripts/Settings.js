@@ -19,7 +19,7 @@ class Settings {
         [settingsKeys.USERNAME]: '',
     };
 
-    constructor(storageKey = 'appSettings') {
+    constructor(storageKey = 'osrs_grid_log:app_settings') {
         this.storageKey = storageKey;
         this.settings = this._loadSettings();
     }
@@ -56,6 +56,11 @@ class Settings {
 
     getAll() {
         return { ...this._defaultSettings, ...this.settings };
+    }
+
+    logout() {
+        this.set(settingsKeys.USERNAME, '');
+        window.location.reload(true);
     }
 }
 

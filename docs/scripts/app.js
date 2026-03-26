@@ -10,11 +10,13 @@ const tiers = [
     'pets'
 ];
 
+const APP_LOCALSTORAGE_KEY = 'osrs_grid_log';
+
 const LOCKED_TILE_IMAGE = 'https://oldschool.runescape.wiki/images/thumb/Cake_of_guidance_detail.png/260px-Cake_of_guidance_detail.png?c3595';
 const QUESTION_MARK_ICON = `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="10" fill="#46433A"/><text x="32" y="44" font-size="42" text-anchor="middle" fill="#FFCF3F" font-family="sans-serif" font-weight="700">?</text></svg>')}`;
 const DRAG_THRESHOLD = 6;
-const STATE_KEY = 'taskStates';
-const STORAGE_KEY = 'taskGridOrder';
+const STATE_KEY = `${APP_LOCALSTORAGE_KEY}:task_states`;
+const ORDER_KEY = `${APP_LOCALSTORAGE_KEY}:grid_order`;
 const MIN_SCALE = 0.5;
 const MAX_SCALE = 2.5;
 const ZOOM_FACTOR = 1.1;
@@ -36,9 +38,9 @@ const MIN_COMPLETE_CELL_OPACITY = 0.2;
 const MAX_COMPLETE_CELL_OPACITY = 1;
 const FILTERED_TIER_OPACITY = 0.2;
 const UNLOCK_TOAST_DURATION_MS = 4500;
-const CL_CACHE_KEY = 'collectionLogCache';
+const CL_CACHE_KEY = `${APP_LOCALSTORAGE_KEY}:collection_log_cache`;
 const CL_CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
-const PLAYER_CL_CACHE_PREFIX = 'playerCollectionLogCache';
+const PLAYER_CL_CACHE_PREFIX = `${APP_LOCALSTORAGE_KEY}:player_data`;
 const PLAYER_CL_CACHE_TTL = 15 * 60 * 1000; // 15 minutes
 const THEMES = new Set(['osrs', 'dark']);
 const DIARY_DIFFICULTIES = new Set(['easy', 'medium', 'hard', 'elite']);
@@ -169,7 +171,7 @@ class CoreUtils {
 
     static loadStates() {
         try {
-            const raw = localStorage.getItem(STATE_KEY);
+            const raw = localStorage.getItem(`${STATE_KEY}:${wiki.toStorageUsername(appSettings.get(settingsKeys.USERNAME))}`);
             if (!raw) {
                 return {};
             }
@@ -182,21 +184,14 @@ class CoreUtils {
             });
             return parsed;
         } catch {
+            console.warn('Failed to load task states from localStorage, starting with empty state map.');
             return {};
         }
     }
 
     static saveStates(map) {
         try {
-            localStorage.setItem(STATE_KEY, JSON.stringify(map));
-        } catch {
-            // ignore localStorage failures
-        }
-    }
-
-    static saveAppSettings(settings) {
-        try {
-            localStorage.setItem(APP_SETTINGS_STORAGE_KEY, JSON.stringify(settings || {}));
+            localStorage.setItem(`${STATE_KEY}:${wiki.toStorageUsername(appSettings.get(settingsKeys.USERNAME))}`, JSON.stringify(map));
         } catch {
             // ignore localStorage failures
         }
@@ -207,7 +202,6 @@ let suppressTaskClick = false;
 let tasksGlobal = [];
 let currentScale = 1;
 let activePopoverAnchor = null;
-let stateMap = CoreUtils.loadStates();
 let hasStartedApp = false;
 let syncButtonStatusTimer = null;
 let activeTierTab = '';
@@ -892,8 +886,12 @@ class Wiki {
         return this.normalizeUsername(value).replace(/\W/g, '_');
     }
 
+    toStorageUsername(value) {
+        return this.toSyncUsername(value).toLowerCase();
+    }
+
     getPlayerCacheKey(username) {
-        return `${PLAYER_CL_CACHE_PREFIX}:${this.normalizeUsername(username).toLowerCase()}`;
+        return `${PLAYER_CL_CACHE_PREFIX}:${this.toStorageUsername(username)}`;
     }
 
     async loadPlayerData(username, options = {}) {
@@ -1612,7 +1610,7 @@ class TaskOrderManager {
 
     saveTaskGridOrder(tasks = tasksGlobal) {
         try {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks.map(task => task.id)));
+            localStorage.setItem(`${ORDER_KEY}:${wiki.toStorageUsername(appSettings.get(settingsKeys.USERNAME))}`, JSON.stringify(tasks.map(task => task.id)));
         } catch {
             // ignore localStorage failures
         }
@@ -5022,6 +5020,13 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    const logoutButton = document.getElementById('logout-button');
+    if (logoutButton) {
+        logoutButton.addEventListener('click', () => {
+            appSettings.logout();
+        });
+    }
+
     const syncButton = document.getElementById('sync-button');
     if (syncButton) {
         syncButton.addEventListener('click', async () => {
@@ -5210,7 +5215,7 @@ class AppBootstrap {
             let all = [];
             let taskListChanged = false;
 
-            const saved = localStorage.getItem(STORAGE_KEY);
+            const saved = localStorage.getItem(`${ORDER_KEY}:${wiki.toStorageUsername(appSettings.get(settingsKeys.USERNAME))}`);
             if (saved) {
                 try {
                     const ids = JSON.parse(saved);
@@ -5405,13 +5410,14 @@ class AppBootstrap {
 
             if (!hasStartedApp) {
                 hasStartedApp = true;
+
+                stateMap = CoreUtils.loadStates();
                 this.startApp();
             }
         };
 
-        const savedUsername = wiki.normalizeUsername(
-            appSettings.get(settingsKeys.USERNAME) ?? localStorage.getItem(settingsKeys.USERNAME)
-        );
+        const savedUsername = wiki.normalizeUsername(appSettings.get(settingsKeys.USERNAME));
+
         if (savedUsername) {
             if (appSettings.get(settingsKeys.USERNAME) !== savedUsername) {
                 appSettings.set(settingsKeys.USERNAME, savedUsername)
@@ -5448,6 +5454,7 @@ class AppBootstrap {
     }
 }
 
+let stateMap = CoreUtils.loadStates();
 const wiki = new Wiki();
 import gridManager from './GridManager.js';
 const taskManager = new TaskManager();
