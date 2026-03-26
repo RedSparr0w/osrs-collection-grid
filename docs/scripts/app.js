@@ -4931,7 +4931,7 @@ window.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    document.addEventListener('mousedown', e => {
+    const handleGlobalPress = e => {
         const clickedPopover = e.target.closest('#task-modal .modal-content');
         if (modal.classList.contains('open') && !clickedPopover) {
             taskModal.hideModal();
@@ -4952,7 +4952,9 @@ window.addEventListener('DOMContentLoaded', () => {
         if (optionsWrap && !optionsWrap.contains(e.target)) {
             uiSettings.closeOptionsPopover();
         }
-    });
+    };
+
+    document.addEventListener(window.PointerEvent ? 'pointerdown' : 'mousedown', handleGlobalPress);
 
     document.addEventListener('keydown', e => {
         if (e.key === 'Escape') {
