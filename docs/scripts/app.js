@@ -3730,42 +3730,99 @@ class GridViewport {
         canvasRuntimeManager.flushZoomRender();
     }
 
+    zoomAtClientPoint(container, nextScale, clientX, clientY) {
+        if (!container) {
+            return false;
+        }
+
+        const previousScale = currentScale;
+        const minScale = this.getMinScale();
+        const clampedScale = CoreUtils.clamp(nextScale, minScale, MAX_SCALE);
+        if (clampedScale === currentScale) {
+            return false;
+        }
+
+        const rect = container.getBoundingClientRect();
+        const pointerX = clientX - rect.left;
+        const pointerY = clientY - rect.top;
+        const contentX = container.scrollLeft + pointerX;
+        const contentY = container.scrollTop + pointerY;
+        const worldX = contentX / currentScale;
+        const worldY = contentY / currentScale;
+
+        currentScale = clampedScale;
+        this.updateGridScale({ deferCanvasRender: true });
+
+        container.scrollLeft = worldX * currentScale - pointerX;
+        container.scrollTop = worldY * currentScale - pointerY;
+
+        if (clampedScale < previousScale) {
+            renderWarmupManager.prewarmVisibleCellSprites();
+            queueCanvasRender();
+        }
+
+        taskModal.refreshPopoverPosition();
+        return true;
+    }
+
     bindWheelZoom(container) {
         container.addEventListener('wheel', e => {
             e.preventDefault();
 
-            const previousScale = currentScale;
+            const nextScale = e.deltaY < 0 ? currentScale * ZOOM_FACTOR : currentScale / ZOOM_FACTOR;
+            this.zoomAtClientPoint(container, nextScale, e.clientX, e.clientY);
+        }, { passive: false });
 
-            const minScale = this.getMinScale();
-            const nextScale = CoreUtils.clamp(
-                e.deltaY < 0 ? currentScale * ZOOM_FACTOR : currentScale / ZOOM_FACTOR,
-                minScale,
-                MAX_SCALE
-            );
+        let pinchStartDistance = 0;
+        let pinchStartScale = 1;
 
-            if (nextScale === currentScale) {
+        container.addEventListener('touchstart', e => {
+            if (e.touches.length !== 2) {
+                if (e.touches.length < 2) {
+                    pinchStartDistance = 0;
+                }
                 return;
             }
 
-            const rect = container.getBoundingClientRect();
-            const pointerX = e.clientX - rect.left;
-            const pointerY = e.clientY - rect.top;
-            const contentX = container.scrollLeft + pointerX;
-            const contentY = container.scrollTop + pointerY;
-            const worldX = contentX / currentScale;
-            const worldY = contentY / currentScale;
+            const [firstTouch, secondTouch] = e.touches;
+            pinchStartDistance = Math.hypot(
+                secondTouch.clientX - firstTouch.clientX,
+                secondTouch.clientY - firstTouch.clientY
+            );
+            pinchStartScale = currentScale;
+        }, { passive: true });
 
-            currentScale = nextScale;
-            this.updateGridScale({ deferCanvasRender: true });
-
-            container.scrollLeft = worldX * currentScale - pointerX;
-            container.scrollTop = worldY * currentScale - pointerY;
-            if (nextScale < previousScale) {
-                renderWarmupManager.prewarmVisibleCellSprites();
-                queueCanvasRender();
+        container.addEventListener('touchmove', e => {
+            if (e.touches.length !== 2 || pinchStartDistance <= 0) {
+                return;
             }
-            taskModal.refreshPopoverPosition();
+
+            e.preventDefault();
+
+            const [firstTouch, secondTouch] = e.touches;
+            const currentDistance = Math.hypot(
+                secondTouch.clientX - firstTouch.clientX,
+                secondTouch.clientY - firstTouch.clientY
+            );
+
+            if (!currentDistance) {
+                return;
+            }
+
+            const centerX = (firstTouch.clientX + secondTouch.clientX) / 2;
+            const centerY = (firstTouch.clientY + secondTouch.clientY) / 2;
+            const nextScale = pinchStartScale * (currentDistance / pinchStartDistance);
+
+            this.zoomAtClientPoint(container, nextScale, centerX, centerY);
         }, { passive: false });
+
+        const resetPinchState = () => {
+            pinchStartDistance = 0;
+            pinchStartScale = currentScale;
+        };
+
+        container.addEventListener('touchend', resetPinchState, { passive: true });
+        container.addEventListener('touchcancel', resetPinchState, { passive: true });
 
         window.addEventListener('resize', () => {
             this.updateGridScale();
